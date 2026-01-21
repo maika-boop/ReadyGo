@@ -1,2 +1,318 @@
-# ReadyGo
-入稿チェッカー・出来杉くんです。入稿前にチェックさせたい時にご使用ください。
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>入稿規定チェッカー・出来杉くん</title>
+    <style>
+        :root {
+            --accent-color: #859A93; 
+            --bg-color: #FFFCF7;     
+            --text-color: #544739;   
+            --card-bg: rgba(255, 255, 255, 0.85);
+            --border-color: #e2e0db;
+            --ng-color: #c66a6a;
+            --ok-color: #6a8c6a;
+        }
+
+        body { 
+            font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif; 
+            background-color: var(--bg-color);
+            background-image: radial-gradient(at 0% 0%, rgba(133, 154, 147, 0.08) 0, transparent 50%), 
+                              radial-gradient(at 100% 100%, rgba(84, 71, 57, 0.05) 0, transparent 50%);
+            background-attachment: fixed;
+            margin: 0; padding: 20px; color: var(--text-color); line-height: 1.8; letter-spacing: 0.02em;
+        }
+
+        .container { max-width: 1100px; margin: auto; }
+
+        .card { 
+            background: var(--card-bg); backdrop-filter: blur(12px);
+            padding: 30px; border-radius: 24px; box-shadow: 0 10px 40px rgba(84, 71, 57, 0.04); 
+            margin-bottom: 25px; position: relative; border: 1px solid rgba(255, 255, 255, 0.7);
+        }
+
+        h1 { font-size: 22px; color: var(--text-color); text-align: center; margin-bottom: 40px; font-weight: 600; letter-spacing: 0.1em; }
+        h2 { font-size: 16px; color: var(--accent-color); display: flex; align-items: center; gap: 8px; margin-top: 0; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; }
+
+        .media-selector { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin-bottom: 20px; }
+        .media-item { display: flex; align-items: center; font-size: 11px; background: white; padding: 8px 12px; border-radius: 10px; cursor: pointer; border: 1px solid transparent; transition: 0.3s; }
+        .media-item input { margin-right: 8px; accent-color: var(--accent-color); }
+        .media-item.selected { border-color: var(--accent-color); background: white; font-weight: 600; }
+
+        .master-result { background: rgba(133, 154, 147, 0.05); padding: 20px; border-radius: 15px; border: 1px solid rgba(133, 154, 147, 0.1); margin-top: 15px; }
+        .size-tags-container { display: flex; flex-wrap: wrap; gap: 8px; }
+        .size-tag { background: white; color: var(--text-color); border: 1px solid var(--accent-color); padding: 5px 15px; border-radius: 6px; font-size: 12px; }
+
+        .upload-zone { border: 2px dashed var(--accent-color); padding: 35px; text-align: center; border-radius: 20px; background: rgba(255,255,255,0.4); cursor: pointer; margin-bottom: 20px; font-size: 14px; }
+        #fileList { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 15px; }
+        .file-card { border-radius: 15px; padding: 15px; background: white; display: flex; gap: 15px; border: 1px solid #f0f0f0; min-height: 100px; }
+        .thumb { width: 80px; height: 80px; object-fit: cover; border-radius: 8px; flex-shrink: 0; }
+        .file-info { flex: 1; min-width: 0; }
+        .file-name { font-weight: bold; font-size: 13px; word-break: break-all; margin-bottom: 4px; display: block; }
+        .file-spec { font-size: 11px; opacity: 0.6; margin-bottom: 8px; display: block; }
+        .res-list { font-size: 11px; line-height: 1.4; margin: 0; padding: 0; list-style: none; }
+        .res-ok { color: var(--ok-color); font-weight: bold; }
+        .res-ng { color: var(--ng-color); font-weight: bold; }
+
+        .sim-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+        .custom-select { padding: 10px 15px; border-radius: 12px; border: 1px solid var(--border-color); background: white; color: var(--text-color); font-size: 14px; outline: none; cursor: pointer; width: 220px; }
+        .sim-grid { display: grid; grid-template-columns: 1.6fr 1fr; gap: 25px; align-items: start; }
+        .field-group { display: flex; flex-direction: column; margin-bottom: 12px; }
+        .field-label { font-size: 11px; font-weight: 600; color: var(--accent-color); margin-bottom: 4px; display: flex; justify-content: space-between; }
+        
+        input[type="text"], textarea { width: 100%; border-radius: 10px; border: 1px solid var(--border-color); padding: 10px 12px; font-size: 13.5px; color: var(--text-color); box-sizing: border-box; background: white; font-family: inherit; }
+        .input-large { height: 220px !important; }
+        textarea { height: 80px; resize: none; }
+        
+        .forbidden-detect { font-size: 10px; margin-top: 2px; color: var(--ng-color); font-weight: bold; min-height: 14px; }
+        .forbidden-char { background: #fee; border-radius: 3px; padding: 0 4px; margin: 0 2px; border: 1px solid var(--ng-color); }
+        .count-tag { font-size: 10px; padding: 2px 6px; border-radius: 4px; background: #f0f0f0; }
+        .count-ng { color: var(--ng-color) !important; font-weight: bold; }
+
+        .rule-card { background: #fdfcf9; border-radius: 15px; padding: 20px; border: 1px solid var(--border-color); }
+        .rule-item { font-size: 12px; margin-bottom: 10px; border-bottom: 1px solid #f3f1ed; padding-bottom: 6px; }
+        .rule-label { font-weight: 600; color: #888; margin-right: 4px; }
+        .error-list { margin: 10px 0 0 0; padding: 0; list-style: none; font-size: 11px; color: var(--ng-color); }
+        .error-list li::before { content: "⚠️ "; }
+
+        .btn-group { position: absolute; top: 30px; right: 30px; display: flex; gap: 8px; }
+        .btn { border: none; padding: 8px 16px; border-radius: 50px; cursor: pointer; font-size: 11px; font-weight: 600; background: var(--accent-color); color: white; transition: 0.2s; }
+        .btn-sub { background: white; color: var(--text-color); border: 1px solid var(--border-color); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🏺 入稿規定チェッカー・出来杉くん</h1>
+
+    <div class="card">
+        <h2>媒体をセレクト</h2>
+        <div class="media-selector" id="mediaSelectGroup"></div>
+        <div id="masterArea" style="display:none;" class="master-result">
+            <div id="masterTags" class="size-tags-container"></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>クリエイティブ判定</h2>
+        <div class="btn-group">
+            <button class="btn" onclick="reCheckImages()">再判定</button>
+            <button class="btn btn-sub" onclick="clearImages()">クリア</button>
+        </div>
+        <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
+            📸 画像をアップロード
+            <input type="file" id="fileInput" multiple accept="image/*" style="display:none" onchange="handleFileSelect(this.files)">
+        </div>
+        <div id="fileList"></div>
+    </div>
+
+    <div class="card">
+        <div class="sim-header">
+            <h2 style="margin:0; border:none;">テキスト模擬入稿</h2>
+            <select class="custom-select" id="mediaSelectSim" onchange="switchSimMedia(this.value)"></select>
+        </div>
+        
+        <div class="sim-grid">
+            <div class="input-box" id="simInputs"></div>
+            
+            <div class="rule-card">
+                <div id="ruleContent"></div>
+                <ul id="errorList" class="error-list"></ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const ratioMap = { "1.91": "1200x628", "1.00": "1080x1080", "1.50": "600x400", "1.20": "600x500", "6.40": "640x100", "3.20": "640x200", "3.00": "600x200", "2.00": "800x400", "8.09": "1456x180", "0.67": "800x1200", "1.67": "600x360", "1.78": "1280x720", "0.56": "720x1280" };
+const INF = 999999999;
+let uploadedFiles = [];
+let activeSimId = "X";
+
+const dekisugiSpecs = [
+    { id:"X", name:"X (Twitter)", sizes:["1200x628","1080x1080"], maxKB: 5120, textRules: [{ label:"本文", key:"body", zen:128, han:257, type:"textarea", large:true }], forbidden: ["#"], note: "ハッシュタグ禁止 / 絵文字・AA可能" },
+    { id:"Google", name:"Google ACI", sizes:["1200x628","1080x1080"], maxKB: 5120, textRules: [{ label:"見出し", key:"head", zen:15, han:30, type:"input" }, { label:"説明文", key:"body", zen:45, han:90, type:"textarea" }], forbidden: [], note: "見出しと説明文は、それぞれ単独での使用可能性あり" },
+    { id:"Meta", name:"Meta (FB/IG)", sizes:["1200x628","1080x1080"], maxKB: 30720, textRules: [{ label:"見出し", key:"head", zen:13, han:26, type:"input" }, { label:"メインテキスト", key:"body", zen:25, han:50, maxZen:75, type:"textarea" }], forbidden: [], note: "メイン：全角25文字以内推奨（長くて75字。表示が途中で切れます）見出し：全角13字以内推奨。絵文字・句読点使用可能" },
+    { id:"TikTok", name:"TikTok", sizes:["1200x628"], maxKB: INF, textRules: [{ label:"広告説明文", key:"body", zen:50, han:100, type:"textarea" }], forbidden: ["絵文字", "特殊文字"], note: "絵文字と特殊文字（特殊記号）は使用できません。" },
+    { id:"LINE", name:"LINE", sizes:["1200x628","1080x1080","600x400"], maxKB: INF, textRules: [{ label:"タイトル", key:"head", zen:20, han:40, type:"input" }, { label:"ディスクリプション", key:"body", zen:75, han:150, type:"textarea" }], forbidden: [], note: "絵文字、！？、カッコ、など使用可能！" },
+    { id:"Yahoo", name:"Yahoo!広告", sizes:["1200x628","1080x1080"], maxKB: 300, textRules: [{ label:"タイトル", key:"head", zen:15, han:30, type:"input" }, { label:"説明文", key:"body", zen:19, han:38, type:"textarea" }], forbidden: [], note: "YDN/PC&スマホ規定" },
+    { id:"SmartNews", name:"SmartNews", sizes:["1200x628","1080x1080"], maxKB: 500, textRules: [{ label:"見出し", key:"head", zen:35, han:70, type:"input" }, { label:"説明文", key:"body", zen:90, han:180, type:"textarea" }], forbidden: [], note: "" },
+    { id:"Gunosy", name:"Gunosy", sizes:["600x360","160x160"], maxKB: INF, textRules: [{ label:"短いテキスト", key:"head", minZen:10, zen:32, han:64, type:"input" }, { label:"長いテキスト", key:"body", minZen:50, zen:75, han:150, type:"textarea" }], forbidden: [], note: "文字数下限あり(全半角問わず)" },
+    { id:"afio", name:"Afio", sizes:[], maxKB: INF, textRules: [{ label:"タイトル", key:"head", zen:18, han:36, type:"input" }, { label:"短い説明文", key:"short", zen:25, han:50, type:"textarea" }, { label:"長い説明文", key:"long", zen:90, han:180, type:"textarea" }], forbidden: [], note: "全角18/25/90文字以内推奨" },
+    { id:"AmoAd", name:"AMoAd", sizes:["640x100","600x500","800x1200"], maxKB: 800, textRules: [{ label:"見出し", key:"head", zen:15, han:30, type:"input" }, { label:"説明文", key:"body", minZen:25, zen:45, han:90, type:"textarea" }], forbidden: [], note: "見出し(15字)/説明文(25-45字)" },
+    { id:"seedapp", name:"SeedApp", sizes:["640x100","600x500","800x400","1200x628"], maxKB: 400, textRules: [{ label:"説明", key:"body", zen:34, han:68, type:"textarea" }], forbidden: [], note: "全角半角問わず、各17文字前後が目安" },
+    { id:"nend", name:"nend", sizes:["640x100","640x200","600x200","600x500","1456x180"], maxKB: 400, textRules: [{ label:"説明", key:"body", zen:34, han:68, type:"textarea" }], forbidden: [], note: "全角半角問わず、各17文字以内" },
+    { id:"imobile", name:"i-mobile", sizes:["640x100","600x500","1200x628"], maxKB: INF, textRules: [{ label:"タイトル", key:"head", zen:30, han:60, type:"input" }, { label:"説明文", key:"body", zen:90, han:180, type:"textarea" }], forbidden: [], note: "" },
+    { id:"Dynalyst", name:"Dynalyst", sizes:["1200x628","600x600"], maxKB: 2252, textRules: [{ label:"見出し", key:"head", zen:12, han:24, type:"input" }, { label:"説明文", key:"body", zen:50, han:100, type:"textarea" }], forbidden: ["♡"], note: "♪はOK、♡はNG" },
+    { id:"Unicorn", name:"Unicorn", sizes:["1200x628","600x500","640x100","640x200","800x1200"], maxKB: 1024, textRules: [{ label:"タイトル", key:"head", zen:12, han:24, type:"input" }, { label:"ディスクリプション", key:"body", zen:45, han:90, type:"textarea" }], forbidden: [], note: "テキストに ♡ ♪ 共に使用OK" },
+    { id:"GDN", name:"GDN", sizes:["1200x628","1080x1080"], maxKB: 150, textRules: [{ label:"短い広告見出し", key:"head", zen:15, han:30, type:"input" }, { label:"長い広告見出し", key:"long", zen:45, han:90, type:"textarea" }, { label:"説明文", key:"body", zen:45, han:90, type:"textarea" }], forbidden: ["！", "？", "【", "】"], note: "句読点・記号の不適切使用、感嘆符(！？)、【】使用禁止" },
+    { id:"ZucksAF", name:"ZucksAF", sizes:["1200x628","640x100","600x500"], maxKB: 1024, textRules: [], forbidden: [], note: "テキスト制作不要" },
+    { id:"Zucks", name:"Zucks", sizes:["640x100","600x500","1200x628"], maxKB: 1024, textRules: [{ label:"タイトル", key:"head", zen:18, han:36, type:"input" }, { label:"説明文", key:"body", zen:42, han:84, type:"textarea" }], forbidden: [], note: "" },
+    { id:"Youappi", name:"Youappi", sizes:["1200x628","600x500","640x100"], maxKB: 150, textRules: [{ label:"タイトル", key:"head", zen:13, han:26, type:"input" }, { label:"メッセージ", key:"body", zen:40, han:80, type:"textarea" }], forbidden: [], note: "" },
+    { id:"Appier", name:"Appier", sizes:["600x500","640x100","640x200","1200x628"], maxKB: 300, textRules: [{ label:"タイトル", key:"head", zen:20, han:40, type:"input" }, { label:"本文", key:"body", zen:75, han:150, type:"textarea" }], forbidden: [], note: "" },
+    { id:"Remerge", name:"Remerge", sizes:["1280x720","720x1280","600x500","640x100"], maxKB: 500, textRules: [{ label:"タイトル", key:"head", zen:12, han:25, type:"input" }, { label:"本文", key:"body", zen:50, han:100, type:"textarea" }], forbidden: [], note: "テキストに ♡ ♪ 共に使用OK" },
+    { id:"Presco", name:"Presco", sizes:["600x500"], maxKB: INF, textRules: [], forbidden: [], note: "テキスト制作不要" }
+];
+
+const group = document.getElementById('mediaSelectGroup');
+const simSelect = document.getElementById('mediaSelectSim');
+dekisugiSpecs.forEach(m => {
+    group.innerHTML += `<label class="media-item"><input type="checkbox" value="${m.id}" onchange="updateView(this)"> ${m.name}</label>`;
+    simSelect.innerHTML += `<option value="${m.id}">${m.name}</option>`;
+});
+
+function switchSimMedia(id) { activeSimId = id; createSimInputs(); }
+
+function createSimInputs() {
+    const container = document.getElementById('simInputs');
+    container.innerHTML = '';
+    const m = dekisugiSpecs.find(x => x.id === activeSimId);
+    if (!m.textRules || m.textRules.length === 0) {
+        container.innerHTML = '<div style="font-size:13px; opacity:0.6;">テキスト制作不要です。</div>';
+    } else {
+        m.textRules.forEach(rule => {
+            const wrap = document.createElement('div'); wrap.className = 'field-group';
+            const counterHtml = `<span><span class="count-tag">全:<span id="count_zen_${rule.key}">0</span>/${rule.zen}</span> <span class="count-tag">半:<span id="count_han_${rule.key}">0</span>/${rule.han || '-'}</span></span>`;
+            wrap.innerHTML = `<div class="field-label">${rule.label} ${counterHtml}</div>
+                ${rule.type === 'input' ? `<input type="text" id="input_${rule.key}" oninput="reCheckText()">` : `<textarea id="input_${rule.key}" class="${rule.large?'input-large':''}" oninput="reCheckText()"></textarea>`}
+                <div id="forbidden_${rule.key}" class="forbidden-detect"></div>`;
+            container.appendChild(wrap);
+        });
+    }
+    reCheckText();
+}
+
+function updateView(el) {
+    if(el) el.parentElement.classList.toggle('selected', el.checked);
+    const selectedIds = Array.from(document.querySelectorAll('#mediaSelectGroup input:checked')).map(i => i.value);
+    document.getElementById('masterArea').style.display = selectedIds.length > 0 ? 'block' : 'none';
+    if (selectedIds.length > 0) {
+        let ratioSet = new Set();
+        dekisugiSpecs.filter(m => selectedIds.includes(m.id)).forEach(m => m.sizes.forEach(s => ratioSet.add((s.split('x')[0]/s.split('x')[1]).toFixed(2))));
+        document.getElementById('masterTags').innerHTML = Array.from(ratioSet).map(r => `<div class="size-tag">${ratioMap[r] || r}</div>`).join('');
+    }
+    reCheckImages(); reCheckText();
+}
+
+function getByte(str) { 
+    let count = 0;
+    for (let i = 0; i < str.length; i++) {
+        const c = str.charCodeAt(i);
+        if ((c >= 0x0 && c < 0x81) || (c === 0xf8f0) || (c >= 0xff61 && c < 0xffa0)) count += 1;
+        else count += 2;
+    }
+    return count;
+}
+
+function checkForbidden(str, m) {
+    const list = m.forbidden || [];
+    let found = [];
+    if (list.includes("絵文字")) {
+        if (/\p{Emoji_Modifier_Base}\p{Emoji_Modifier}?|\p{Emoji_Presentation}|\p{Emoji}\uFE0F/gu.test(str)) found.push("絵文字");
+    }
+    if (list.includes("特殊文字")) {
+        if (/[♡♪！？]/gu.test(str)) found.push("特殊記号");
+    }
+    list.forEach(f => { if (f !== "絵文字" && f !== "特殊文字" && str.includes(f)) found.push(f); });
+    return found;
+}
+
+function reCheckText() {
+    const m = dekisugiSpecs.find(x => x.id === activeSimId);
+    const errorList = document.getElementById('errorList');
+    const ruleContent = document.getElementById('ruleContent');
+    errorList.innerHTML = '';
+    
+    if(!m.textRules || m.textRules.length === 0) return;
+
+    let hasError = false;
+    let anyInput = false;
+    let ruleHtml = '';
+
+    m.textRules.forEach(rule => {
+        const el = document.getElementById(`input_${rule.key}`);
+        if (!el) return;
+        const val = el.value; if (val.length > 0) anyInput = true;
+        const zen = val.length; const han = getByte(val);
+        document.getElementById(`count_zen_${rule.key}`).innerText = zen;
+        document.getElementById(`count_han_${rule.key}`).innerText = han;
+
+        let zenLimit = rule.maxZen || rule.zen;
+        let isZenOver = zen > zenLimit;
+        let isHanOver = rule.han && han > rule.han;
+        let isUnder = rule.minZen && zen > 0 && zen < rule.minZen;
+
+        document.getElementById(`count_zen_${rule.key}`).className = isZenOver ? 'count-ng' : '';
+        document.getElementById(`count_han_${rule.key}`).className = isHanOver ? 'count-ng' : '';
+
+        if(isZenOver || isHanOver) { hasError = true; errorList.innerHTML += `<li>${rule.label}：文字数オーバー</li>`; }
+        if(isUnder) { hasError = true; errorList.innerHTML += `<li>${rule.label}：文字数が少なすぎます(${rule.minZen}字〜)</li>`; }
+
+        const foundF = checkForbidden(val, m);
+        const fDisp = document.getElementById(`forbidden_${rule.key}`);
+        if (foundF.length > 0) {
+            hasError = true; fDisp.innerHTML = `禁止内容：` + foundF.map(c => `<span class="forbidden-char">${c}</span>`).join('');
+            errorList.innerHTML += `<li>${rule.label}：使用不可の内容（${foundF.join(', ')}）</li>`;
+        } else { fDisp.innerHTML = ''; }
+
+        ruleHtml += `<div class="rule-item"><span class="rule-label">${rule.label}：</span><span>全角 ${rule.zen}${rule.maxZen?' (最大'+rule.maxZen+')':''}${rule.han?' / 半角 '+rule.han:''}</span></div>`;
+    });
+
+    ruleContent.innerHTML = ruleHtml + `<div class="rule-item"><span class="rule-label">禁止事項：</span><span>${m.forbidden.join(', ') || 'なし'}</span></div><div class="rule-item" style="border:none;"><span class="rule-label">備考：</span><span>${m.note || 'なし'}</span></div>`;
+
+    if (!hasError && anyInput) errorList.innerHTML = '<li style="color:var(--ok-color); font-weight:bold; list-style:none;">✅ すべての規定をクリアしています</li>';
+}
+
+async function handleFileSelect(files) {
+    for (let file of files) { const info = await getImageInfo(file); uploadedFiles.push({ file, info }); }
+    reCheckImages();
+}
+
+function reCheckImages() {
+    const selectedIds = Array.from(document.querySelectorAll('#mediaSelectGroup input:checked')).map(i => i.value);
+    const fileListDiv = document.getElementById('fileList');
+    fileListDiv.innerHTML = '';
+    uploadedFiles.forEach(item => {
+        const ratio = (item.info.w / item.info.h).toFixed(2);
+        const kb = Math.round(item.file.size / 1024);
+        let passed = [], failed = [];
+        selectedIds.forEach(id => {
+            const m = dekisugiSpecs.find(x => x.id === id);
+            const sizeMatch = m.sizes.some(s => (s.split('x')[0]/s.split('x')[1]).toFixed(2) === ratio && item.info.w >= s.split('x')[0]);
+            if (sizeMatch) {
+                if (kb <= m.maxKB) passed.push(m.name);
+                else failed.push(m.name + "(" + m.maxKB + "KB制限)");
+            }
+        });
+        const card = document.createElement('div'); card.className = 'file-card';
+        card.innerHTML = `<img src="${item.info.src}" class="thumb">
+            <div class="file-info">
+                <span class="file-name">${item.file.name}</span>
+                <span class="file-spec">${item.info.w}x${item.info.h} / ${kb}KB</span>
+                <ul class="res-list">
+                    ${passed.length ? `<li class="res-ok">✅ 適合媒体：${passed.join(', ')}</li>` : ''}
+                    ${failed.length ? `<li class="res-ng">❌ 不適合（容量Over）：${failed.join(', ')}</li>` : ''}
+                </ul>
+            </div>`;
+        fileListDiv.prepend(card);
+    });
+}
+
+function clearImages() { uploadedFiles = []; document.getElementById('fileList').innerHTML = ''; document.getElementById('fileInput').value = ''; }
+
+function getImageInfo(file) {
+    return new Promise(resolve => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => resolve({ src: e.target.result, w: img.width, h: img.height });
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+switchSimMedia("X");
+</script>
+</body>
+</html>
